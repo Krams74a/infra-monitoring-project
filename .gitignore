@@ -1,0 +1,29 @@
+# Логи, в том числе access.log, который генерирует analyze_logs.sh
+*.log
+logs/
+
+# Временные файлы
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Артефакты сборки и архивы для деплоя
+build/
+dist/
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Локальные переменные окружения
+.env
+.env.*
+
+# Настройки редакторов
+.vscode/
+.idea/

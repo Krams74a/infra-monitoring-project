@@ -1,0 +1,5 @@
+# Текстовые файлы храним и выкладываем с LF: со стилем Windows (CRLF) bash на Linux падает
+* text=auto eol=lf
+
+*.png    binary
+*.pcapng binary
