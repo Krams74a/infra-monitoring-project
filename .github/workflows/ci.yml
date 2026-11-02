@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  bash-scripts:
+    name: bash-scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v5
+
+      - name: Проверка синтаксиса bash
+        run: |
+          bash -n check_api.sh
+          bash -n analyze_logs.sh
+
+      - name: Статический анализ ShellCheck
+        run: |
+          command -v shellcheck >/dev/null || sudo apt-get install -y shellcheck
+          shellcheck check_api.sh analyze_logs.sh
+
+      - name: "check_api.sh: доступный API, ожидается код 0"
+        run: |
+          # httpbin.org иногда отвечает 5xx, поэтому даем три попытки
+          for attempt in 1 2 3; do
+            ./check_api.sh https://httpbin.org/status/200 && exit 0
+            echo "Попытка ${attempt} не удалась, ждем 5 секунд"
+            sleep 5
+          done
+          exit 1
+
+      - name: "check_api.sh: ошибки, ожидается код 1"
+        run: |
+          expect_fail() {
+            if ./check_api.sh "$@"; then
+              echo "Ожидался код возврата 1 для: $*"
+              exit 1
+            fi
+          }
+          expect_fail https://httpbin.org/status/404
+          expect_fail http://127.0.0.1:9
+          expect_fail not-a-url
+          expect_fail
+
+      - name: "analyze_logs.sh: генерация и анализ лога"
+        run: |
+          ./analyze_logs.sh
+          test "$(wc -l < access.log)" -ge 300
+          if ./analyze_logs.sh -n 10; then
+            echo "Ожидалась ошибка при -n меньше 300"
+            exit 1
+          fi
+
+  docker-compose:
+    name: docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v5
+
+      - name: Проверка docker-compose.yml
+        run: docker compose config --quiet
+
+      - name: Запуск стека
+        run: docker compose up -d --wait
+
+      - name: Запрос через прокси
+        run: |
+          docker compose ps
+          ./check_api.sh http://localhost:80
+          curl -s http://localhost:80 | grep -q "Monitoring Service Active"
+
+      - name: Остановка стека
+        if: always()
+        run: docker compose down
