@@ -22,7 +22,9 @@ jobs:
 
       - name: Статический анализ ShellCheck
         run: |
-          command -v shellcheck >/dev/null || sudo apt-get install -y shellcheck
+          if ! command -v shellcheck >/dev/null; then
+            sudo apt-get install -y shellcheck
+          fi
           shellcheck check_api.sh analyze_logs.sh
 
       - name: "check_api.sh: доступный API, ожидается код 0"
